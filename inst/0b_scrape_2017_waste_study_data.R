@@ -81,7 +81,7 @@ process_appendix_data_page <- function(x){
 }
 
 
-wastedata <- Map(function(x){ purrr::map_dfr(x, process_appendix_data_page) },
+oc_waste_2017 <- Map(function(x){ purrr::map_dfr(x, process_appendix_data_page) },
     list(sfr, mfr, com)) %>%
   bind_rows()
 
