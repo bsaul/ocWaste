@@ -1,51 +1,117 @@
 library(ggplot2)
 library(ggbeeswarm)
+library(ggiraph)
+library(dplyr)
+library(ocwaste)
 
-x <- nc_waste_rates %>%
-  select(county, msw_cd_1617, pop_072017, is_orange) %>%
+x <- nc_msw_cd_1617_report %>%
+  select(county, msw_cd_1617, pop_07_2016, is_orange) %>%
   mutate(
     lbs_msw_cd_1617 = msw_cd_1617 * 2000
-  )
-x <- x %>%
+  ) %>%
   left_join(
-    ncrecycling, by = 'county'
+    nc_recycling_1617_report, by = 'county'
   ) %>%
   mutate(
-    total_recycling_lbs = total_recycling_per_person * pop_072017,
-    total_output_lbs    = lbs_msw_cd_1617 + total_recycling_lbs
+    total_recycling_lbs = total_recycling_per_person * pop_07_2016,
+    total_output_lbs    = lbs_msw_cd_1617 + total_recycling_lbs,
+    prop_recycling      = total_recycling_lbs/total_output_lbs
   ) %>%
   select(
-    county, lbs_msw_cd_1617, total_recycling_lbs, total_output_lbs, pop_072017, is_orange
+    county, lbs_msw_cd_1617, total_recycling_lbs, total_output_lbs,
+    pop_07_2016, prop_recycling, is_orange
   )
 
 plotdt <- x %>%
-  tidyr::gather(key = "key", value = "value", -county, -pop_072017, -is_orange) %>%
-  mutate(per_person = value/pop_072017) %>%
-  tidyr::gather(key = "measure", value = "value", -county, -pop_072017, -is_orange, -key) %>%
+  tidyr::gather(key = "key", value = "value", -county, -pop_07_2016, -is_orange) %>%
+  mutate(per_person = value/pop_07_2016) %>%
+  tidyr::gather(key = "measure", value = "value", -county, -pop_07_2016, -is_orange, -key) %>%
   mutate(
     measure = if_else(measure == "per_person", "Per Person", "Total Pounds"),
-    key     = case_when(
-      key == "total_recycling_lbs" ~ "Recycling",
-      key == "lbs_msw_cd_1617"     ~ "MSW + CD",
-      key == "total_output_lbs"    ~ "MSW + CD + Recycling",
-    ),
-    key     = factor(key, levels = c("Recycling", "MSW + CD", "MSW + CD + Recycling"), ordered = TRUE)
+    # key     = case_when(
+    #   key == "total_recycling_lbs" ~ "Recycling",
+    #   key == "lbs_msw_cd_1617"     ~ "MSW + CD",
+    #   key == "total_output_lbs"    ~ "MSW + CD + Recycling",
+    #   key == "prop_recycling"      ~ "Proportion Recycling"
+    # ),
+    key     = factor(key, levels = c("total_recycling_lbs", "lbs_msw_cd_1617", "total_output_lbs", "prop_recycling"),
+                     labels = c("Recycling", "Municipal Solid Waste +\\nConstruction & Demolition", "MSW + CD + Recycling", "Proportion Recycling"),
+                     ordered = TRUE)
   ) %>%
-  filter(key != "MSW + CD + Recycling")
+  filter(!(key %in% c("MSW + CD + Recycling", "Proportion Recycling")))
 
-ggplot(
+plotdt <- plotdt %>%
+  mutate(
+    value = value/2000,
+     measure = case_when(
+       measure == "Per Person" ~ "Tons/Person",
+       measure == "Total Pounds" ~ "Total Tons"
+         ),
+    tooltip = paste0(county, "\n", round(value, 2))
+    )
+
+geom_quasirandom_interactive <- function(
+  mapping = NULL,
+  data = NULL,
+  width = NULL,
+  varwidth = FALSE,
+  bandwidth=.5,
+  nbins=NULL,
+  method='quasirandom',
+  groupOnX=NULL,
+  dodge.width=0,
+  stat='identity',
+  position = "quasirandom",
+  na.rm = FALSE,
+  show.legend = NA,
+  inherit.aes = TRUE,
+  ...
+) {
+  position <- position_quasirandom(width = width, varwidth = varwidth, bandwidth=bandwidth,nbins=nbins,method=method,groupOnX=groupOnX,dodge.width=dodge.width)
+
+  ggplot2::layer(
+    data = data,
+    mapping = mapping,
+    stat = stat,
+    geom = ggiraph::GeomInteractivePoint,
+    position = position,
+    show.legend = show.legend,
+    inherit.aes = inherit.aes,
+    params = list(
+      na.rm = na.rm,
+      ...
+    )
+  )
+}
+
+g <- ggplot(
   data = plotdt,
-  aes(x = key,y = log10(value), color = is_orange)
+  aes(x =value, y = key, color = is_orange, size = is_orange, shape = is_orange,
+      data_id = county, tooltip = tooltip)
 ) +
-  geom_beeswarm(shape = 1, size = 0.5) +
+  geom_quasirandom_interactive(groupOnX = FALSE) +
+  scale_x_log10() +
   scale_color_manual(
     guide  = FALSE,
     values = c("black", "orange")
   ) +
-  coord_flip() +
+  scale_size_manual(
+    guide = FALSE,
+    values = c(0.75, 1.5)
+  ) +
+  scale_shape_manual(
+    guide = FALSE,
+    values = c(1, 16)
+  ) +
   facet_grid(~ measure, scales = "free_x") +
   theme_minimal() +
   theme(
+    axis.title.x = element_blank(),
     axis.title.y = element_blank()
   )
+
+z <- girafe( code = print(g), width_svg = 8, height_svg = 4)
+girafe_options(z, opts_hover(css = "fill:red;r:100pt;") )
+z
+
 
