@@ -1,11 +1,11 @@
-Package: ocwaste
+Package: ocWaste
 Type: Package
 Title: Data about waste management in Orange County, NC
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Author: Bradley Saul <bradleysaul@gmail.com>
+Maintainer: Bradley Saul <bradleysaul@gmail.com>
+Description: Contains data scraped from government sources pertaining to waste 
+   management in North Carolina and Orange County in particular
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
