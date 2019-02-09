@@ -2,10 +2,9 @@
 # TITLE: Scrape data from NC reycling rates report
 #  DATE: 20190207
 #  PROG: B. Saul
-#  DESC: Grabs data from
+#  DESC: Grabs data from 2017_nc_recycling_rates.pdf
 #
 #------------------------------------------------------------------------------#
-
 
 library(dplyr)
 
@@ -32,7 +31,7 @@ common_recycling <- pdfdata %>%
   select(county = V5, lbs_person = V6) %>%
   mutate(recovery_type = "common_household_recycling_per_person")
 
-ncrecycling <- bind_rows(total_recycling, common_recycling) %>%
+nc_recycling_1617_report <- bind_rows(total_recycling, common_recycling) %>%
   mutate(
     county = lettercase::str_title_case(tolower(county)),
     lbs_person = as.numeric(lbs_person)
@@ -41,5 +40,7 @@ ncrecycling <- bind_rows(total_recycling, common_recycling) %>%
     key = recovery_type, value = lbs_person
   )
 
-%>%
+save(nc_recycling_1617_report, file = "data/nc_recycling_1617_report.rda")
+
+rm(list = ls())
 
