@@ -21,5 +21,11 @@
 #' @source https://edocs.deq.nc.gov/WasteManagement/0/edoc/996950/NC_SWMMAR_FY2016-17_CountyPerCapitaReport.pdf?searchid=b1697dcf-7917-4c91-950e-fb192ed909de
 
 "nc_recycling_1617_report"
-"nc_recycling_1617_report"
-"nc_recycling_1617_report"
+
+#' Data on Orange County Waste Composition 2017
+#'
+#' From the  North Carolina Department of Environmental Quality Division of Waste Management
+#' report on County Population, Waste Disposal, Per Capita Rate and Percent Reduction, FY 2016-2017
+#' @source http://www.orangecountync.gov/DocumentCenter/View/2826/2017-Orange-County-Waste-Characterization-Study-Final-Report-PDF?bidId=
+
+"oc_waste_2017"

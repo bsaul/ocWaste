@@ -13,18 +13,17 @@
 
 
 library(dplyr)
+library(readxl)
 wastepdf <- pdftools::pdf_text("inst/extdata/2017ocwastestudy.pdf")
 pages <- purrr::map(wastepdf, ~strsplit(.x, "\n")[[1]])
 
-## ASample Data ####
+## Sample Data ####
 ## Sample Results are contained in Appendices B, C, and D which are pages 37-58
 sfr <- pages[39:46] # Single family residential
 mfr <- pages[49:50] # Multi family residential
 com <- pages[53:58] # Commercial
 
-sfr[[1]]
-
-
+## Function that creates a data.frame from an appendix page
 process_appendix_data_page <- function(x){
   # Get the source
   src  <- stringr::str_extract(x[4], "Table .{3}")
@@ -67,7 +66,8 @@ process_appendix_data_page <- function(x){
     ) %>%
     filter(value != '') %>%
     mutate(
-      value = as.numeric(stringr::str_remove(value, "%")),
+      sample_id    = trimws(sample_id),
+      value        = as.numeric(stringr::str_remove(value, "%")),
       # jurisdiction = juris,
       year         = stringr::str_extract(time, "2016|2017"),
       month        = stringr::str_extract(time, "Fall|Spring"),
@@ -80,8 +80,22 @@ process_appendix_data_page <- function(x){
   # strsplit(load_info, "\\s\\s+")
 }
 
+sampleinfo <- read_excel("inst/extdata/2017ocwastestudy_sampleinfo.xlsx") %>%
+  mutate(
+    sample_id = as.character(sample_id)
+  )
 
-oc_waste_2017 <- Map(function(x){ purrr::map_dfr(x, process_appendix_data_page) },
-    list(sfr, mfr, com)) %>%
-  bind_rows()
+oc_waste_2017 <- Map(
+  function(x){ purrr::map_dfr(x, process_appendix_data_page) },
+  list(sfr, mfr, com)) %>%
+  bind_rows() %>%
+  left_join(
+    sampleinfo,
+    by = c("sample_id", "pdf_source")
+  )
+
+save(oc_waste_2017, file = "data/oc_waste_composition_2017_report.rda")
+
+
+
 
