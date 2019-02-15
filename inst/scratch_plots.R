@@ -114,6 +114,24 @@ z <- girafe( code = print(g), width_svg = 8, height_svg = 4)
 girafe_options(z, opts_hover(css = "fill:red;r:100pt;") )
 z
 
-
+library(ggplot2)
 oc_waste_2017 %>%
+  group_by(pdf_source, source, jurisdiction, sample_id, day, material_category) %>%
+  summarise(
+    value = sum(value)
+  ) %>%
+  group_by(
+    source, jurisdiction, material_category
+  ) %>%
+  summarise(
+    value = mean(value)
+  ) -> x
+
+ggplot(
+  data = x,
+  aes(x = jurisdiction, y = material_category, size = value)
+) +
+  geom_point() +
+  scale_size_area()
+
 
