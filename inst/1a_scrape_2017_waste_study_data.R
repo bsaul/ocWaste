@@ -60,9 +60,9 @@ process_appendix_data_page <- function(x){
   # browser()
   table_data <- table_data %>%
     select(-1L) %>%
-    select(category = 1L, everything()) %>%
+    select(material = 1L, everything()) %>%
     tidyr::gather(
-      key = "sample_id", value = "value", -category
+      key = "sample_id", value = "value", -material
     ) %>%
     filter(value != '') %>%
     mutate(
@@ -85,6 +85,7 @@ sampleinfo <- read_excel("inst/extdata/2017ocwastestudy_sampleinfo.xlsx") %>%
     sample_id = as.character(sample_id)
   )
 
+
 oc_waste_2017 <- Map(
   function(x){ purrr::map_dfr(x, process_appendix_data_page) },
   list(sfr, mfr, com)) %>%
@@ -92,7 +93,31 @@ oc_waste_2017 <- Map(
   left_join(
     sampleinfo,
     by = c("sample_id", "pdf_source")
+  ) %>%
+  mutate(
+    material_category = case_when(
+      material %in% c("Newspaper", "Glossy Magazines", "Cardboard", "Waxy Cardboard",
+                      "Phone Books", "Paperboard", "Other Books", "White Ledger",
+                      "Mixed Recyclable Paper", "Low-Grade Paper", "Aseptic Containers") ~
+        "Paper",
+      material %in% c("All Plastic Bottles", "Plastic Film", "All Cups & Tubs",
+                      "Dairy Plastic Containers", "Mixed Plastic Containers",
+                      "Retail Bags & Stretch Film",
+                      "All Other Plastics") ~ "Plastic",
+      material %in% c("Food Waste", "Textiles/Leather", "Diapers", "Other Organics/Rubber") ~ "Organic",
+      material %in% c("Tin/Steel Cans", "Aerosol Cans", "Other Ferrous") ~ "Ferrous Metal",
+      material %in% c("Aluminum Cans", "Aluminum Foil", "Other Non-Ferrous") ~ "Non-Ferrous Metal",
+      material %in% c("Glass Bottles and Jars", "Other Glass") ~ "Glass",
+      material %in% c("Wood Pallets", "Wood Lumber", "Painted/Treated Wood", "Stumps/Branches") ~ "Wood",
+      material %in% c("Brick/Concrete/Dirt", "Yard Waste", "Lead Acid Batteries", "Dry Cell Batteries",
+                      "Oil Filters", "Other Hazardous Waste", "Infectious Waste",
+                      "Reusable Waste") ~ "Special Waste",
+      material %in% c("Electronic Waste") ~ "Electronic Waste"
+    )
   )
+
+
+
 
 save(oc_waste_2017, file = "data/oc_waste_composition_2017_report.rda")
 
