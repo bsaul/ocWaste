@@ -96,22 +96,34 @@ cat(
 
 ## Create plot ####
 
-plot_it <- function(dt, colors, title){
+plot_it <- function(dt, colors, title, .vjust){
 
-  dt <- filter(dt, !is.na(value))
+  dt <- filter(dt, !is.na(value)) %>%
+    group_by(feature) %>%
+    arrange(rank, .by_group = TRUE) %>%
+    mutate(
+      plot_y = case_when(
+        lag(rank, default = -1L) == (rank - 1L) ~ rank + 2L,
+        lag(rank, default = -1L) == (rank - 2L) ~ rank + 1L,
+        TRUE  ~ rank
+      )
+    )
+
   orange_rank <- dt$rank[dt$is_orange]
-  breaks      <- dt$rank[dt$feature]
+  breaks <- blabels <- dt$rank[dt$feature]
+  blabels[c(FALSE, diff(breaks) < 3)] <- ""
 
   ggplot(
     data = dt,
     aes(x = rank, y = value, fill = is_orange)
   ) +
     geom_vline(
-      xintercept = nrow(dt) + 1, color = "grey50"
+      xintercept = nrow(dt) + 2, color = "grey50"
     ) +
     scale_x_continuous(
       breaks = breaks,
-      limits = c(nrow(dt) + 2, -4),
+      labels = blabels,
+      limits = c(nrow(dt) + 3, -4),
       expand = c(0, 0),
       trans  = "reverse"
     ) +
@@ -122,11 +134,11 @@ plot_it <- function(dt, colors, title){
     geom_col(width = 0.5) +
     geom_label(
       data = dt %>% filter(feature),
-      aes(label = label, fill = NA),
+      aes(label = label, x = plot_y, fill = NA),
       label.size =  0,
       size   = 2.5,
       hjust  = 0,
-      vjust  = 0.2
+      vjust  = .vjust
     ) +
     coord_flip() +
     scale_fill_manual(
@@ -141,7 +153,9 @@ plot_it <- function(dt, colors, title){
       axis.text.y         = element_text(size = 6),
       axis.title.x        = element_blank(),
       axis.title.y        = element_blank(),
+      axis.ticks.y        = element_line(size = 0.2, color = "grey50"),
       panel.grid.major.y  = element_blank(),
+      panel.grid.minor.y  = element_blank(),
       panel.grid.minor.x  = element_blank()
     )
 }
@@ -160,9 +174,13 @@ hold <- plotdt %>%
       key == "Municipal Solid Waste +\\nConstruction & Demolition" & measure == "Per Person" ~ "Solid Waste Tons Per Person",
       key == "Municipal Solid Waste +\\nConstruction & Demolition" & measure == "Total Pounds" ~ "Solid Waste Total Tons (x1000)"
     ),
+    vjust = if_else(
+      stringr::str_detect(key, "Waste"),
+      0, 0.45
+    ),
     p = purrr::pmap(
-      .l = list(d = data, c = color, t = title),
-      .f = function(d, c, t) plot_it(d, c, t))
+      .l = list(d = data, c = color, t = title, v = vjust),
+      .f = function(d, c, t, v) plot_it(d, c, t, v))
   )
 
 p <- plot_grid(
@@ -178,3 +196,4 @@ ggsave(
   "inst/land_solid_waste_fig1.pdf",
   plot = p, width = 7, height = 7
 )
+
